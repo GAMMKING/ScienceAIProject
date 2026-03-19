@@ -801,8 +801,31 @@ function CombinationDashboard({ onHome, allResults }: { onHome: () => void, allR
   );
 }
 
-function Dashboard({ onHome, ageData, usageData, profileData, isSimulated }: { onHome: () => void, ageData: any[], usageData: any[], profileData: any[], isSimulated: boolean, key?: string }) {
+function Dashboard({ onHome, ageData, usageData, profileData, isSimulated, allResults = [] }: { onHome: () => void, ageData: any[], usageData: any[], profileData: any[], isSimulated: boolean, allResults?: any[], key?: string }) {
   const totalParticipants = profileData.reduce((acc, curr) => acc + curr.value, 0);
+
+  // Calculate responses over time (by minute)
+  const timeMap = new Map<string, number>();
+  let totalResponses = 0;
+
+  allResults.forEach(result => {
+    if (result.createdAt) {
+      // Handle both Firestore Timestamp and JS Date
+      const date = result.createdAt.toDate ? result.createdAt.toDate() : new Date(result.createdAt);
+      // Format as HH:MM
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const timeKey = `${hours}:${minutes}`;
+      
+      timeMap.set(timeKey, (timeMap.get(timeKey) || 0) + 1);
+      totalResponses++;
+    }
+  });
+
+  // Sort by time
+  const timeData = Array.from(timeMap.entries())
+    .map(([time, count]) => ({ time, count }))
+    .sort((a, b) => a.time.localeCompare(b.time));
 
   return (
     <motion.div
@@ -886,6 +909,33 @@ function Dashboard({ onHome, ageData, usageData, profileData, isSimulated }: { o
               <Legend verticalAlign="bottom" height={36} />
             </PieChart>
           </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Chart 4: Responses Over Time */}
+      <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 mt-8">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-semibold text-slate-800">Responses Over Time (Per Minute)</h3>
+          <div className="text-sm font-medium text-slate-600 bg-white px-3 py-1 rounded-full shadow-sm border border-slate-200">
+            Total Responses: {totalResponses}
+          </div>
+        </div>
+        <div className="h-72">
+          {timeData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={timeData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="time" stroke="#64748b" />
+                <YAxis stroke="#64748b" allowDecimals={false} />
+                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                <Bar dataKey="count" name="Responses" fill="#10b981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-slate-400">
+              No time data available
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
@@ -1195,7 +1245,7 @@ export default function App() {
         )}
 
         {view === 'ASSESSMENT' && <CombinedAssessment key="assessment" onHome={() => setView('MENU')} onAddResult={handleAddResult} />}
-        {isAdmin && view === 'DASHBOARD' && <Dashboard key="dashboard" onHome={() => setView('MENU')} ageData={ageData} usageData={usageData} profileData={profileData} isSimulated={isSimulated} />}
+        {isAdmin && view === 'DASHBOARD' && <Dashboard key="dashboard" onHome={() => setView('MENU')} ageData={ageData} usageData={usageData} profileData={profileData} isSimulated={isSimulated} allResults={allResults} />}
         {isAdmin && view === 'COMBINATION_DASHBOARD' && <CombinationDashboard key="combination" onHome={() => setView('MENU')} allResults={allResults} />}
         {isAdmin && view === 'PRESENTATION' && <PresentationView key="presentation" onHome={() => setView('MENU')} />}
       </AnimatePresence>
