@@ -1,0 +1,24 @@
+{
+  "entities": {
+    "AssessmentResult": {
+      "title": "AssessmentResult",
+      "description": "A user's assessment result",
+      "type": "object",
+      "properties": {
+        "ageGroup": { "type": "string" },
+        "aiUsage": { "type": "string" },
+        "memoryScorePercent": { "type": "number" },
+        "reliancePercent": { "type": "number" },
+        "profile": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ageGroup", "aiUsage", "memoryScorePercent", "reliancePercent", "profile", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/results/{resultId}": {
+      "schema": { "$ref": "#/entities/AssessmentResult" },
+      "description": "Stores assessment results"
+    }
+  }
+}

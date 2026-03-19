@@ -1,0 +1,32 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidResult(data) {
+      return hasOnlyAllowedFields(['ageGroup', 'aiUsage', 'memoryScorePercent', 'reliancePercent', 'profile', 'createdAt']) &&
+             data.ageGroup is string && data.ageGroup.size() > 0 && data.ageGroup.size() < 20 &&
+             data.aiUsage is string && data.aiUsage.size() > 0 && data.aiUsage.size() < 20 &&
+             data.memoryScorePercent is number && data.memoryScorePercent >= 0 && data.memoryScorePercent <= 100 &&
+             data.reliancePercent is number && data.reliancePercent >= 0 && data.reliancePercent <= 100 &&
+             data.profile is string && data.profile.size() > 0 && data.profile.size() < 50 &&
+             data.createdAt is timestamp;
+    }
+
+    match /results/{resultId} {
+      // Allow any authenticated user (including anonymous) to create a result
+      allow create: if isAuthenticated() && isValidResult(request.resource.data);
+      // Allow any authenticated user to read results for the dashboard
+      allow read: if isAuthenticated();
+      allow update, delete: if false;
+    }
+  }
+}
